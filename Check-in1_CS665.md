@@ -2,7 +2,7 @@
 
 Project Check-in 1: Scope, Schema, and Strategy
 
-Sricharan Cherepally | Fall 2026 | Project: SkillSwap, a peer-to-peer student tutoring app (Android)
+Sricharan Cherepally - C986X996 | Fall 2026 | Project: SkillSwap, a peer-to-peer student tutoring app (Android)
 
 # **1\. Problem Definition and Mobile Scope**
 
