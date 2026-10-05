@@ -28,37 +28,25 @@ The first version uses two tables on purpose. I expect to expand and normalize i
 
 ## **SQL (CREATE TABLE statements)**
 
+```sql
 CREATE TABLE Student (
-
-student_id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-full_name TEXT NOT NULL,
-
-email TEXT NOT NULL UNIQUE,
-
-major TEXT
-
+    student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name  TEXT NOT NULL,
+    email      TEXT NOT NULL UNIQUE,
+    major      TEXT
 );
 
 CREATE TABLE SkillPost (
-
-post_id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-student_id INTEGER NOT NULL,
-
-post_type TEXT NOT NULL CHECK (post_type IN ('TEACH','LEARN')),
-
-skill_name TEXT NOT NULL,
-
-skill_level TEXT NOT NULL CHECK (skill_level IN ('Beginner','Intermediate','Advanced')),
-
-available_days TEXT,
-
-status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
-
-FOREIGN KEY (student_id) REFERENCES Student(student_id) ON DELETE CASCADE
-
+    post_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id     INTEGER NOT NULL,
+    post_type      TEXT NOT NULL CHECK (post_type IN ('TEACH','LEARN')),
+    skill_name     TEXT NOT NULL,
+    skill_level    TEXT NOT NULL CHECK (skill_level IN ('Beginner','Intermediate','Advanced')),
+    available_days TEXT,
+    status         TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+    FOREIGN KEY (student_id) REFERENCES Student(student_id) ON DELETE CASCADE
 );
+```
 
 ## **Sample data used for testing**
 
@@ -96,37 +84,41 @@ Notation: S = Student, SP = SkillPost, and the usual join condition is S.student
 
 ## **Q1. Open posts offering to teach SQL Basics**
 
-π post_id, student_id, skill_level, available_days ( σ post_type = 'TEACH' ∧ skill_name = 'SQL Basics' ∧ status = 'open' (SP) )
+```math
+\pi_{\text{post\_id, student\_id, skill\_level, available\_days}}\Big(\sigma_{\text{post\_type}=\text{'TEACH'} \;\wedge\; \text{skill\_name}=\text{'SQL Basics'} \;\wedge\; \text{status}=\text{'open'}}(SP)\Big)
+```
 
 **Result on sample data:** Returns post 1 (student 1, Advanced, Mon and Wed).
 
 ## **Q2. Names of students who can teach SQL Basics**
 
-π full_name ( σ post_type = 'TEACH' ∧ skill_name = 'SQL Basics' ∧ status = 'open' ( S ⋈ SP ) )
+```math
+\pi_{\text{full\_name}}\Big(\sigma_{\text{post\_type}=\text{'TEACH'} \;\wedge\; \text{skill\_name}=\text{'SQL Basics'} \;\wedge\; \text{status}=\text{'open'}}(S \bowtie_{S.\text{student\_id}=SP.\text{student\_id}} SP)\Big)
+```
 
 **Result on sample data:** Returns Aarav Mehta.
 
 ## **Q3. Skills a given student wants to learn**
 
-π skill_name ( σ full_name = 'Jordan Blake' ∧ post_type = 'LEARN' ( S ⋈ SP ) )
+```math
+\pi_{\text{skill\_name}}\Big(\sigma_{\text{full\_name}=\text{'Jordan Blake'} \;\wedge\; \text{post\_type}=\text{'LEARN'}}(S \bowtie_{S.\text{student\_id}=SP.\text{student\_id}} SP)\Big)
+```
 
 **Result on sample data:** Returns SQL Basics.
 
 ## **Q4. Automatic matches between tutors and learners (self-join)**
 
-T = ρ T ( σ post_type = 'TEACH' ∧ status = 'open' (SP) )
-
-L = ρ L ( σ post_type = 'LEARN' ∧ status = 'open' (SP) )
-
-M = T ⋈ T.skill_name = L.skill_name ∧ T.student_id ≠ L.student_id L
-
-π A.full_name, B.full_name, T.skill_name ( M ⋈ T.student_id = A.student_id ρ A (S) ⋈ L.student_id = B.student_id ρ B (S) )
+```math
+\begin{aligned}T &= \rho_{T}\Big(\sigma_{\text{post\_type}=\text{'TEACH'} \;\wedge\; \text{status}=\text{'open'}}(SP)\Big) \\L &= \rho_{L}\Big(\sigma_{\text{post\_type}=\text{'LEARN'} \;\wedge\; \text{status}=\text{'open'}}(SP)\Big) \\M &= T \bowtie_{T.\text{skill\_name}=L.\text{skill\_name} \;\wedge\; T.\text{student\_id}\neq L.\text{student\_id}} L \\\text{Result} &= \pi_{A.\text{full\_name},\; B.\text{full\_name},\; T.\text{skill\_name}}\Big(M \bowtie_{T.\text{student\_id}=A.\text{student\_id}} \rho_{A}(S) \bowtie_{L.\text{student\_id}=B.\text{student\_id}} \rho_{B}(S)\Big)\end{aligned}
+```
 
 **Result on sample data:** Returns five matches: Aarav→Jordan (SQL Basics), Aarav→Daniel (SQL Basics), Priya→Maria (Python), Maria→Priya (Calculus I), and Jordan→Daniel (Excel). Daniel's Python teaching post is closed, so it is not matched.
 
 ## **Q5. Skills people want to learn that nobody is offering (set difference)**
 
-π skill_name ( σ post_type = 'LEARN' ∧ status = 'open' (SP) ) − π skill_name ( σ post_type = 'TEACH' ∧ status = 'open' (SP) )
+```math
+\pi_{\text{skill\_name}}\Big(\sigma_{\text{post\_type}=\text{'LEARN'} \;\wedge\; \text{status}=\text{'open'}}(SP)\Big)\;-\;\pi_{\text{skill\_name}}\Big(\sigma_{\text{post\_type}=\text{'TEACH'} \;\wedge\; \text{status}=\text{'open'}}(SP)\Big)
+```
 
 **Result on sample data:** Returns Public Speaking, since Aarav wants to learn it but no open post teaches it.
 
@@ -157,128 +149,78 @@ I want to use AI to understand why something works, so that I can write and debu
 
 # **Appendix: Complete SQL (schema, sample data, and queries)**
 
-\-- CS665 Project Check-in 1: SkillSwap (peer-to-peer student tutoring, Android / SQLite)
-
+```sql
+-- CS665 Project Check-in 1: SkillSwap (peer-to-peer student tutoring, Android / SQLite)
 PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS SkillPost;
-
 DROP TABLE IF EXISTS Student;
 
 CREATE TABLE Student (
-
-student_id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-full_name TEXT NOT NULL,
-
-email TEXT NOT NULL UNIQUE,
-
-major TEXT
-
+    student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name  TEXT NOT NULL,
+    email      TEXT NOT NULL UNIQUE,
+    major      TEXT
 );
 
 CREATE TABLE SkillPost (
-
-post_id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-student_id INTEGER NOT NULL,
-
-post_type TEXT NOT NULL CHECK (post_type IN ('TEACH','LEARN')),
-
-skill_name TEXT NOT NULL,
-
-skill_level TEXT NOT NULL CHECK (skill_level IN ('Beginner','Intermediate','Advanced')),
-
-available_days TEXT,
-
-status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
-
-FOREIGN KEY (student_id) REFERENCES Student(student_id) ON DELETE CASCADE
-
+    post_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id     INTEGER NOT NULL,
+    post_type      TEXT NOT NULL CHECK (post_type IN ('TEACH','LEARN')),
+    skill_name     TEXT NOT NULL,
+    skill_level    TEXT NOT NULL CHECK (skill_level IN ('Beginner','Intermediate','Advanced')),
+    available_days TEXT,
+    status         TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+    FOREIGN KEY (student_id) REFERENCES Student(student_id) ON DELETE CASCADE
 );
 
-\-- Sample data
-
+-- Sample data
 INSERT INTO Student (full_name, email, major) VALUES
-
-('Aarav Mehta', '<aarav.mehta@example.edu>', 'Computer Science'),
-
-('Priya Nair', '<priya.nair@example.edu>', 'Mathematics'),
-
-('Jordan Blake', '<jordan.blake@example.edu>', 'Business'),
-
-('Maria Lopez', '<maria.lopez@example.edu>', 'Mathematics'),
-
-('Daniel Kim', '<daniel.kim@example.edu>', 'Computer Science');
+ ('Aarav Mehta',  'aarav.mehta@example.edu',  'Computer Science'),
+ ('Priya Nair',   'priya.nair@example.edu',   'Mathematics'),
+ ('Jordan Blake', 'jordan.blake@example.edu', 'Business'),
+ ('Maria Lopez',  'maria.lopez@example.edu',  'Mathematics'),
+ ('Daniel Kim',   'daniel.kim@example.edu',   'Computer Science');
 
 INSERT INTO SkillPost (student_id, post_type, skill_name, skill_level, available_days, status) VALUES
+ (1,'TEACH','SQL Basics',      'Advanced',     'Mon,Wed', 'open'),
+ (2,'TEACH','Python',          'Intermediate', 'Tue,Thu', 'open'),
+ (3,'LEARN','SQL Basics',      'Beginner',     'Mon',     'open'),
+ (4,'LEARN','Python',          'Beginner',     'Thu',     'open'),
+ (5,'LEARN','SQL Basics',      'Beginner',     'Wed',     'open'),
+ (4,'TEACH','Calculus I',      'Advanced',     'Fri',     'open'),
+ (3,'TEACH','Excel',           'Intermediate', 'Tue',     'open'),
+ (2,'LEARN','Calculus I',      'Beginner',     'Fri',     'open'),
+ (1,'LEARN','Public Speaking', 'Beginner',     'Thu',     'open'),
+ (5,'TEACH','Python',          'Beginner',     'Mon',     'closed'),
+ (5,'LEARN','Excel',           'Beginner',     'Tue',     'open');
 
-(1,'TEACH','SQL Basics', 'Advanced', 'Mon,Wed', 'open'),
-
-(2,'TEACH','Python', 'Intermediate', 'Tue,Thu', 'open'),
-
-(3,'LEARN','SQL Basics', 'Beginner', 'Mon', 'open'),
-
-(4,'LEARN','Python', 'Beginner', 'Thu', 'open'),
-
-(5,'LEARN','SQL Basics', 'Beginner', 'Wed', 'open'),
-
-(4,'TEACH','Calculus I', 'Advanced', 'Fri', 'open'),
-
-(3,'TEACH','Excel', 'Intermediate', 'Tue', 'open'),
-
-(2,'LEARN','Calculus I', 'Beginner', 'Fri', 'open'),
-
-(1,'LEARN','Public Speaking', 'Beginner', 'Thu', 'open'),
-
-(5,'TEACH','Python', 'Beginner', 'Mon', 'closed'),
-
-(5,'LEARN','Excel', 'Beginner', 'Tue', 'open');
-
-\-- Q1: open posts offering to teach SQL Basics
-
+-- Q1: open posts offering to teach SQL Basics
 SELECT post_id, student_id, skill_level, available_days
-
 FROM SkillPost
-
 WHERE post_type = 'TEACH' AND skill_name = 'SQL Basics' AND status = 'open';
 
-\-- Q2: names of students who can teach SQL Basics
-
+-- Q2: names of students who can teach SQL Basics
 SELECT s.full_name
-
 FROM Student s JOIN SkillPost sp ON s.student_id = sp.student_id
-
 WHERE sp.post_type = 'TEACH' AND sp.skill_name = 'SQL Basics' AND sp.status = 'open';
 
-\-- Q3: skills a given student wants to learn
-
+-- Q3: skills a given student wants to learn
 SELECT sp.skill_name
-
 FROM Student s JOIN SkillPost sp ON s.student_id = sp.student_id
-
 WHERE s.full_name = 'Jordan Blake' AND sp.post_type = 'LEARN';
 
-\-- Q4: automatic matches (tutor, learner, skill) using a self-join on SkillPost
-
+-- Q4: automatic matches (tutor, learner, skill) using a self-join on SkillPost
 SELECT tutor.full_name AS tutor_name, learner.full_name AS learner_name, t.skill_name
-
 FROM SkillPost t
-
-JOIN SkillPost l ON t.skill_name = l.skill_name AND t.student_id <> l.student_id
-
-JOIN Student tutor ON t.student_id = tutor.student_id
-
+JOIN SkillPost l   ON t.skill_name = l.skill_name AND t.student_id <> l.student_id
+JOIN Student tutor   ON t.student_id = tutor.student_id
 JOIN Student learner ON l.student_id = learner.student_id
-
 WHERE t.post_type = 'TEACH' AND t.status = 'open'
+  AND l.post_type = 'LEARN' AND l.status = 'open';
 
-AND l.post_type = 'LEARN' AND l.status = 'open';
-
-\-- Q5: skills people want to learn that nobody is offering (set difference)
-
+-- Q5: skills people want to learn that nobody is offering (set difference)
 SELECT skill_name FROM SkillPost WHERE post_type = 'LEARN' AND status = 'open'
-
 EXCEPT
-
 SELECT skill_name FROM SkillPost WHERE post_type = 'TEACH' AND status = 'open';
+```
